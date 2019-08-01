@@ -14,8 +14,6 @@ module ADCSendTelosP {
     uses interface SplitControl as AMControl;
 }
 implementation {
-    
-
     // Stores samples taken over adc
     uint16_t buffer[NUM_SAMPLES];
 
@@ -30,8 +28,6 @@ implementation {
     bool busy = FALSE;
     // Acts as a buffer for the packet to be sent
     message_t pkt;
-
-    // Defines the ADC Configuration
 
     // Fires when the platform startsup
     event void Boot.booted() {
