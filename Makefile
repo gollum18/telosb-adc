@@ -1,2 +1,0 @@
-COMPONENT=ADCSendTelosC
-include $(MAKERULES)
