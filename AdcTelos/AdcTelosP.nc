@@ -60,7 +60,7 @@ implementation {
      */
     event void AMSend.sendDone(message_t* msg, error_t err) {
         if (sendBusy && err == SUCCESS) {
-            call Leds.led0Toggle();
+            report_sent();
             sendBusy = FALSE;
         }
     }
