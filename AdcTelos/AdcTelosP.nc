@@ -75,7 +75,7 @@ implementation {
                 pkt->groupid = GROUP_ID;
                 pkt->data = val;
                 // Sanity check
-                if (pkt == NULL) {
+                if (sendBuf == NULL) {
                     return;
                 }
                 // Enqueue the packet, schedule its sending
