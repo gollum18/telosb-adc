@@ -99,6 +99,9 @@ module ReadForwardP {
 }
 implementation {
 
+    // Are we already sending a packet?
+    bool sendBusy = FALSE;
+
     // The current reading type
     uint8_t rflag = LOWER_FLAG;
 
@@ -191,8 +194,8 @@ implementation {
      * Defines a task for sending a packet.
      */
     task void sendPacket() {
-        // First construct the payload
-        if ((post constructPayload()) == SUCCESS) {
+        // First construct the payload - Only is not already sending data
+        if (!sendBusy && (post constructPayload()) == SUCCESS) {
             // Next construct the packet
             if ((post constructPacket()) == SUCCESS) {
                 // Finally, send the packet
@@ -242,17 +245,22 @@ implementation {
      * @param len The length of the payload component of the received message.
      */
     event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len) {
-        // Only forward the packet if were in FORWARD mode and the packet length
-        //  is the right length
-        if (DOES_FORWARD && len == sizeof(readfwd_t)) {
-            // load the received message into the backing variable
-            rcv_envelope = *msg;
-            // extract the payload, load it into the backing variable
-            rcv_payload = *((readfwd_t*)payload);
-            // set the routing flag
-            rflag = rcv_payload.rflag;
-            // Route the packet
-            routePacket();
+        // Only handle received packets if not busy sending
+        if (!sendBusy) {
+            // Only forward the packet if were in FORWARD mode and the packet length
+            //  is the right length
+            if (DOES_FORWARD && len == sizeof(readfwd_t)) {
+                // inform the system were busy sending
+                sendBusy = TRUE;
+                // load the received message into the backing variable
+                rcv_envelope = *msg;
+                // extract the payload, load it into the backing variable
+                rcv_payload = *((readfwd_t*)payload);
+                // set the routing flag
+                rflag = rcv_payload.rflag;
+                // Route the packet
+                routePacket();
+            }
         }
         return msg;
     }
@@ -275,6 +283,7 @@ implementation {
         } else {
             report_problem();
         }
+        sendBusy = FALSE;
     }
 
     // Defines handlers for the ReadSensor.readDone events
