@@ -73,12 +73,13 @@
  * message complexity (number of messages) as much as possible.
  */
 
-#include "ReadForward"
+#include "ReadForward.h"
 
-configuration ReadForwardC { }
+configuration ReadForwardC {
+}
 implementation {
     // Declares the primary components
-    components ReadForwardP, MainC, ActiveMessageC, LedsC;
+    components ReadForwardP as App, MainC, ActiveMessageC, LedsC;
     components new AMSenderC(AM_CHANNEL), new AMReceiverC(AM_CHANNEL);
     components new TimerMilliC() as ReadTimer;
 
@@ -106,5 +107,5 @@ implementation {
     App.ReadTemperature -> ThermalSensor.Temperature;
     App.ReadVisibleLight -> VisibleLightSensor;
     App.ReadInfraredLight -> InfraredLightSensor;
-    App.ReadVoltage -> VoltageSenser;
+    App.ReadVoltage -> VoltageSensor;
 }

@@ -102,12 +102,12 @@ enum {
 
 // the max size of this structure is 28 bytes
 typedef struct ForwardPacket {
-    ux_int8_t nodeid;   // the id of the origin node
-    ux_int8_t groupid;  // the id of the group the origin node belongs to
-    ux_int8_t hops;     // the amount of hops taken from origin to destination
-    ux_int8_t rflag;    // the type of reading sent
+    nx_int8_t nodeid;   // the id of the origin node
+    nx_int8_t groupid;  // the id of the group the origin node belongs to
+    nx_int8_t hops;     // the amount of hops taken from origin to destination
+    nx_int8_t rflag;    // the type of reading sent
     // all readings take two bytes to store giving us 12 hops altogther
-    ux_int16_t readings[NREADINGS];
+    nx_int16_t readings[NREADINGS];
 } readfwd_t;
 
 #endif

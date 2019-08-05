@@ -90,7 +90,7 @@ module ReadForwardP {
         interface AMPacket;
 
         // Define the read interfaces
-        interface Read<uint16_t> as ReadHumidty;
+        interface Read<uint16_t> as ReadHumidity;
         interface Read<uint16_t> as ReadTemperature;
         interface Read<uint16_t> as ReadVisibleLight;
         interface Read<uint16_t> as ReadInfraredLight;
@@ -98,14 +98,6 @@ module ReadForwardP {
     }
 }
 implementation {
-
-    // Define prototype methods - Since these are tasks they do not 
-    //  run synchonously but are instead at the mercy of the TOS scheduler
-    // The backing types they modify may not be in stable state as such
-    //  This *should* be ok since a FORWARD mode Telosb only receives
-    //  one packet at a time from one sender
-    task routeMsg();
-    task forwardMsg();
 
     // The current reading type
     uint8_t rflag = LOWER_FLAG;
@@ -132,7 +124,7 @@ implementation {
 
     // Define support functions
 
-    task void routePacket() {
+    void routePacket() {
         switch(rflag) {
             case FLAG_TEMPERATURE:
                 call ReadTemperature.read();
@@ -148,17 +140,20 @@ implementation {
                 report_problem();
         }
     }
-
-    task void sendPacket() {
+    
+    /**
+     * Defines a task for constructing the payload of a packet.
+     */
+    task void constructPayload() {
         // construct the payload
         fwd_payload.nodeid = TOS_NODE_ID;
-        fwd_payload.groupid = call Packet.group(&rcv_envelope);
+        fwd_payload.groupid = call AMPacket.group(&rcv_envelope);
         
         // First hop if origin node
         if (!DOES_FORWARD) {
             fwd_payload.hops = 1;
         } else {
-            fwd_payload.hops = rcv_payload + 1;
+            fwd_payload.hops = rcv_payload.hops + 1;
         }
 
         // set the payload flag
@@ -170,26 +165,44 @@ implementation {
         } else {
             fwd_payload.readings[rcv_payload.hops] = most_recent_reading;
         }
-
-        // construct the packet
+    }
+    
+    /**
+     * Defines a task for constructing a packet to send.
+     */
+    task void constructPacket() {
+         // construct the packet
         call Packet.clear(&fwd_envelope); // this deep cleans the fwd packet
         // set source and destination
-        call Packet.setSource(&fwd_envelope, TOS_NODE_ID);
-        call Packet.setDestination(&fwd_envelope, FORWARD_ADDR);
+        call AMPacket.setSource(&fwd_envelope, TOS_NODE_ID);
+        call AMPacket.setDestination(&fwd_envelope, FORWARD_ADDR);
 
         // set the payload length, this must be done prior to copying it over
-        uint8_t len = sizeof(fwd_payload);
-        call Packet.setPayloadLength(&fwd_envelope, len);
+        call Packet.setPayloadLength(&fwd_envelope, sizeof(readfwd_t));
         
         // copy the payload over
-        void* pref = Packet.getPayload(&fwd_envelope, len);
-        memcpy(pref, ((void*)&fwdpayload), sizeof(fwd_envelope));
-
+        memcpy(call Packet.getPayload(&rcv_envelope, sizeof(readfwd_t)), ((void*)&fwd_payload), sizeof(fwd_envelope));
+       
         // increment the flag
         rflag += FLAG_STEP;
+    }
 
-        // send the packet
-        call AMSend.send(FORWARD_ADDR, &fwd_envelope, Packet.payloadLength(&fwd_envelope));
+    /**
+     * Defines a task for sending a packet.
+     */
+    task void sendPacket() {
+        // First construct the payload
+        if ((post constructPayload()) == SUCCESS) {
+            // Next construct the packet
+            if ((post constructPacket()) == SUCCESS) {
+                // Finally, send the packet
+                call AMSend.send(FORWARD_ADDR, &fwd_envelope, call Packet.payloadLength(&fwd_envelope));
+            } else {
+                report_problem();
+            }
+        } else {
+            report_problem();
+        }
     }
 
     /**
@@ -206,11 +219,11 @@ implementation {
     event void RadioControl.startDone(error_t result) {
         if (result != SUCCESS) {
             report_problem();
-            RadioControl.start();
+            call RadioControl.start();
         } else {
             // Start the read timer if in ORIGIN mode
             if (!DOES_FORWARD) {
-                ReadTimer.startPeriodic(SERVICE);
+                call ReadTimer.startPeriodic(TIMER_PERIOD_READ);
             }
         }
     }
@@ -228,7 +241,7 @@ implementation {
      * @param payload The payload of the received message.
      * @param len The length of the payload component of the received message.
      */
-    event void Receive.receive(message_t* msg, void* payload, uint8_t len) {
+    event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len) {
         // Only forward the packet if were in FORWARD mode and the packet length
         //  is the right length
         if (DOES_FORWARD && len == sizeof(readfwd_t)) {
@@ -238,9 +251,10 @@ implementation {
             rcv_payload = *((readfwd_t*)payload);
             // set the routing flag
             rflag = rcv_payload.rflag;
-            // route the packet
-            post routePacket();
+            // Route the packet
+            routePacket();
         }
+        return msg;
     }
 
     /**
@@ -249,9 +263,18 @@ implementation {
      */
     event void ReadTimer.fired() {
         if (rflag > UPPER_FLAG) {
-            rflag = LOWER_FLAG
+            rflag = LOWER_FLAG;
         }
-        post routePacket();
+        // Route the packet
+        routePacket();
+    }
+    
+    event void AMSend.sendDone(message_t* msg, error_t result) {
+        if (result == SUCCESS) {
+            report_sent();
+        } else {
+            report_problem();
+        }
     }
 
     // Defines handlers for the ReadSensor.readDone events
