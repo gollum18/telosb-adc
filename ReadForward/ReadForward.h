@@ -20,11 +20,11 @@
 
 // Stores state information for cycling through readings
 enum {
-    STATE_TEMP = 0,
-    STATE_HUMID = 1,
-    STATE_VISIBLE = 2,
-    STATE_INFRARED = 3,
-    STATE_VOLTAGE = 4
+    RTYPE_TEMP = 0,
+    RTYPE_HUMID = 1,
+    RTYPE_VISIBLE = 2,
+    RTYPE_INFRARED = 3,
+    RTYPE_VOLTAGE = 4
 };
 
 enum {
@@ -48,7 +48,7 @@ enum {
 
 typedef nx_struct oscilloscope {
     nx_uint16_t count; /* The readings are samples count * NREADINGS onwards */
-    nx_uint8_t state; /* The sensor to read from. */
+    nx_uint8_t rtype; /* The sensor to read from. */
     nx_uint8_t group; /* Group id of sending mote. */
     nx_uint8_t hops; /* The number of hops so far */
     nx_uint8_t id[NREADINGS]; /* Mote id of sending mote. */

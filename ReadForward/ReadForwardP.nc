@@ -62,31 +62,31 @@ implementation
     // used to advance state, i.e. the sensor read from
     void advanceState() {
     
-        if (local.state == STATE_TEMP) {
-            local.state = STATE_HUMID;
-        } else if (local.state == STATE_HUMID) {
-            local.state = STATE_VISIBLE;
-        } else if (local.state == STATE_VISIBLE) {
-            local.state = STATE_INFRARED;
-        } else if (local.state == STATE_INFRARED) {
-            local.state = STATE_VOLTAGE;
-        } else if (local.state == STATE_VOLTAGE) {
-            local.state = STATE_TEMP;
+        if (local.rtype == RTYPE_TEMP) {
+            local.rtype = RTYPE_HUMID;
+        } else if (local.rtype == RTYPE_HUMID) {
+            local.rtype = RTYPE_VISIBLE;
+        } else if (local.rtype == RTYPE_VISIBLE) {
+            local.rtype = RTYPE_INFRARED;
+        } else if (local.rtype == RTYPE_INFRARED) {
+            local.rtype = RTYPE_VOLTAGE;
+        } else if (local.rtype == RTYPE_VOLTAGE) {
+            local.rtype = RTYPE_TEMP;
         }
     }
     
     bool getReading() {
         bool result = FALSE;
     
-        if (local.state == STATE_TEMP) {
+        if (local.rtype == RTYPE_TEMP) {
             result = call ReadTemperature.read();
-        } else if (local.state == STATE_HUMID) {
+        } else if (local.rtype == RTYPE_HUMID) {
             result = call ReadHumidity.read();
-        } else if (local.state == STATE_VISIBLE) {
+        } else if (local.rtype == RTYPE_VISIBLE) {
             result = call ReadVisible.read();
-        } else if (local.state == STATE_INFRARED) {
+        } else if (local.rtype == RTYPE_INFRARED) {
             result = call ReadInfrared.read();
-        } else if (local.state == STATE_VOLTAGE) {
+        } else if (local.rtype == RTYPE_VOLTAGE) {
             result = call ReadVoltage.read();
         }
         
@@ -127,7 +127,7 @@ implementation
         // set forwarding information
         local.group = omsg->group;
         local.hops = omsg->hops;
-        local.state = omsg->state;
+        local.rtype = omsg->rtype;
         local.id[local.hops] = TOS_NODE_ID;
         
         // get a reading
