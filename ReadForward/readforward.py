@@ -8,12 +8,14 @@ AM_OSCILLOSCOPE = 0x93
 class ReadForwardMsg(tos.Packet):
     def __init__(self, packet = None):
         tos.Packet.__init__(self,
-                            [('count', 'int', 2),
+                            [('version', 'int', 2),
+                             ('interval', 'int', 2),
+                             ('count', 'int', 2),
                              ('rtype', 'int', 1),
                              ('group', 'int', 1),
                              ('hops', 'int', 1),
-                             ('id', 'blob', None),
-                             ('readings', 'blob', None)],
+                             ('id', 'blob', 5),
+                             ('readings', 'blob', 10)],
                             packet)
 if '-h' in sys.argv:
     print("Usage:", sys.argv[0], "serial@/dev/ttyUSB0:57600")

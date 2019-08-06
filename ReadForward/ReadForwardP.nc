@@ -58,7 +58,6 @@ implementation
     void report_problem() { call Leds.led0Toggle(); }
     void report_sent() { call Leds.led1Toggle(); }
     void report_received() { call Leds.led2Toggle(); }
-    void report_read() { call Leds.led1Toggle(); call Leds.led2Toggle(); }
     
     // used to advance state, i.e. the sensor read from
     void advanceState() {
@@ -75,8 +74,8 @@ implementation
         }
     }
     
-    bool getReading() {
-        bool result = FALSE;
+    error_t getReading() {
+        error_t result;
     
         if (local.rtype == RTYPE_TEMP) {
             result = call ReadTemperature.read();
@@ -114,6 +113,11 @@ implementation
     event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len) {
         readfwd_t *omsg = payload;
         
+        // don't handle messages if in the middle of sending
+        if (sendBusy) {
+            return msg;
+        }
+        
         // pass the message back if its not for me
         if (!call AMPacket.isForMe(msg)) {
             return msg;
@@ -121,9 +125,14 @@ implementation
 
         report_received();
 
-        /*
-        If we hear from a future count, jump ahead but suppress our own change
+        /* If we receive a newer version, update our interval. 
+           If we hear from a future count, jump ahead but suppress our own change
         */
+        if (omsg->version > local.version)
+        {
+            local.version = omsg->version;
+            local.interval = omsg->interval;
+        }
         if (omsg->count > local.count)
         {
             local.count = omsg->count;
@@ -133,9 +142,13 @@ implementation
         local.group = omsg->group;
         local.hops = omsg->hops;
         local.rtype = omsg->rtype;
+        memcpy(&local.id, &omsg->id, sizeof(local.id));
+        memcpy(&local.readings, &omsg->readings, sizeof(local.readings));
         
         // get a reading
-        getReading();
+        if (getReading() != SUCCESS) {
+            report_problem();
+        }
 
         return msg;
     }
@@ -145,8 +158,10 @@ implementation
     - read next sample
     */
     event void Timer.fired() {
-        if (!sendBusy && getReading() != SUCCESS) {
-            report_problem();
+        if (!sendBusy) {
+            if (getReading() != SUCCESS) {
+                report_problem();
+            }
         }
     }
 
@@ -162,8 +177,6 @@ implementation
     }
     
     void handleRead(error_t result, uint16_t data) {
-        report_read();
-    
         if (result != SUCCESS)
         {
             data = 0xffff;
@@ -183,7 +196,7 @@ implementation
                 local.readings[0] = data;
             } else {
                 local.id[local.hops] = TOS_NODE_ID;
-                local.readings[local.hops++];
+                local.readings[local.hops++] = data;
             }
             // Don't need to check for null because we've already checked length
             // above

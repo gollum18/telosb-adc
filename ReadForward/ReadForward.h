@@ -41,13 +41,15 @@ enum {
     NREADINGS = 5,
 
     /* Default sampling period. */
-    DEFAULT_INTERVAL = 512,
+    DEFAULT_INTERVAL = 1024,
 
     // The AM channels
     AM_CHANNEL = 0x93
 };
 
 typedef nx_struct oscilloscope {
+    nx_uint16_t version; /* Used for synchronization */
+    nx_uint16_t interval; /* Used to help synchronize packet sending */
     nx_uint16_t count; /* The readings are samples count * NREADINGS onwards */
     nx_uint8_t rtype; /* The sensor to read from. */
     nx_uint8_t group; /* Group id of sending mote. */
