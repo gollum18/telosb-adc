@@ -58,10 +58,10 @@ implementation
     void report_problem() { call Leds.led0Toggle(); }
     void report_sent() { call Leds.led1Toggle(); }
     void report_received() { call Leds.led2Toggle(); }
+    void report_read() { call Leds.led1Toggle(); call Leds.led2Toggle(); }
     
     // used to advance state, i.e. the sensor read from
     void advanceState() {
-    
         if (local.rtype == RTYPE_TEMP) {
             local.rtype = RTYPE_HUMID;
         } else if (local.rtype == RTYPE_HUMID) {
@@ -113,6 +113,11 @@ implementation
 
     event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len) {
         readfwd_t *omsg = payload;
+        
+        // pass the message back if its not for me
+        if (!call AMPacket.isForMe(msg)) {
+            return msg;
+        }
 
         report_received();
 
@@ -128,7 +133,6 @@ implementation
         local.group = omsg->group;
         local.hops = omsg->hops;
         local.rtype = omsg->rtype;
-        local.id[local.hops] = TOS_NODE_ID;
         
         // get a reading
         getReading();
@@ -141,25 +145,25 @@ implementation
     - read next sample
     */
     event void Timer.fired() {
-        // some repetitive code here, but its fine
-        bool result = FALSE;
-        
-        getReading();
-        
-        if (result != SUCCESS)
+        if (!sendBusy && getReading() != SUCCESS) {
             report_problem();
+        }
     }
 
     event void AMSend.sendDone(message_t* msg, error_t error) {
-        if (error == SUCCESS)
+        if (error == SUCCESS) {
             report_sent();
-        else
+        }
+        else {
             report_problem();
+        }
 
         sendBusy = FALSE;
     }
     
     void handleRead(error_t result, uint16_t data) {
+        report_read();
+    
         if (result != SUCCESS)
         {
             data = 0xffff;
@@ -185,21 +189,24 @@ implementation
             // above
             memcpy(call AMSend.getPayload(&sendBuf, sizeof(local)), &local, sizeof local);
             
-            if (MODE == ORIGIN) {
-                advanceState();
-            }
-            
-            if (call AMSend.send(0, &sendBuf, sizeof local) == SUCCESS)
+            if (call AMSend.send(DESTINATION, &sendBuf, sizeof local) == SUCCESS) {
                 sendBusy = TRUE;
+            }
         }
-        if (!sendBusy)
+        if (!sendBusy) {
             report_problem();
+        }
         
         /* Part 2 of cheap "time sync": increment our count if we didn't
         jump ahead. */
-        if (!suppressCountChange)
+        if (!suppressCountChange) {
             local.count++;
+        }
         suppressCountChange = FALSE;
+            
+        if (MODE == ORIGIN) {
+            advanceState();
+        }
     }
 
     event void ReadTemperature.readDone(error_t result, uint16_t data) {

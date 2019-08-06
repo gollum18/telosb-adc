@@ -9,7 +9,7 @@ class ReadForwardMsg(tos.Packet):
     def __init__(self, packet = None):
         tos.Packet.__init__(self,
                             [('count', 'int', 2),
-                             ('state', 'int', 1),
+                             ('rtype', 'int', 1),
                              ('group', 'int', 1),
                              ('hops', 'int', 1),
                              ('id', 'blob', None),

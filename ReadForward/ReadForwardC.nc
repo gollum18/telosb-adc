@@ -25,7 +25,7 @@ implementation
     components new HamamatsuS1087ParC() as VisibleProvider;
     components new HamamatsuS10871TsrC() as InfraredProvider;
     components new VoltageC() as VoltageProvider;
-    components new AMSenderC(AM_OSCILLOSCOPE), new AMReceiverC(AM_OSCILLOSCOPE);
+    components new AMSenderC(AM_CHANNEL), new AMReceiverC(AM_CHANNEL);
 
     App.Boot -> MainC;
     App.RadioControl -> ActiveMessageC;

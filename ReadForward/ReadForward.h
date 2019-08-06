@@ -31,9 +31,9 @@ enum {
     /* Whether the node is a generator or forwarder. */
     ORIGIN = 0,
     FORWARD = 1,
-    MODE = ORIGIN,
+    MODE = FORWARD,
     /* Packet metadata. */
-    DESTINATION = 1,
+    DESTINATION = 0,
     GROUP = 0,
 
     /* Number of readings per message. If you increase this, you may have to
@@ -43,7 +43,8 @@ enum {
     /* Default sampling period. */
     DEFAULT_INTERVAL = 512,
 
-    AM_OSCILLOSCOPE = 0x93
+    // The AM channels
+    AM_CHANNEL = 0x93
 };
 
 typedef nx_struct oscilloscope {
@@ -52,7 +53,7 @@ typedef nx_struct oscilloscope {
     nx_uint8_t group; /* Group id of sending mote. */
     nx_uint8_t hops; /* The number of hops so far */
     nx_uint8_t id[NREADINGS]; /* Mote id of sending mote. */
-    nx_uint16_t readings[NREADINGS];
+    nx_uint16_t readings[NREADINGS]; /* The readings from hop-to-hop */
 } readfwd_t;
 
 #endif
