@@ -5,8 +5,7 @@ import asyncio, enum, math, os, sys, time
 import simplejson
 from tinyos3 import tos
 
-AM_OSCILLOSCOPE = 0x93
-
+AM_READFORWARD = 0x93
 
 class RType(enum.Enum):
     TEMPERATURE = 0
@@ -19,14 +18,12 @@ class RType(enum.Enum):
 class ReadForwardMsg(tos.Packet):
     def __init__(self, packet = None):
         tos.Packet.__init__(self,
-                            [('version', 'int', 2),
-                             ('interval', 'int', 2),
-                             ('count', 'int', 2),
-                             ('rtype', 'int', 1),
+                            [('rtype', 'int', 1),
                              ('group', 'int', 1),
                              ('hops', 'int', 1),
-                             ('id', 'blob', 5),
-                             ('readings', 'blob', 10)],
+                             # Youll have to update the bytes here to adjust for the NREADINGS variable in ReadForward
+                             ('id', 'blob', 5), # same as NREADINGS
+                             ('readings', 'blob', 10)], # 2*NREADINGS
                             packet)
 
 
@@ -153,10 +150,12 @@ async def main():
         sent = 0
         while sent < packets:
             p = am.read()
-            if p and p.type == AM_OSCILLOSCOPE:
+            if p and p.type == AM_READFORWARD:
                 msg = ReadForwardMsg(p.data)
                 # depending on the synchronicity of the motes, they could send
                 #   an empty packet
+                # this is dependent on the timer interval set for the ORIGIN
+                #   mote in the ReadForward application
                 if msg != None:
                     for reading in await package(msg):
                         await session.post(url, params={'msg': simplejson.dumps(reading)})
