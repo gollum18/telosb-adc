@@ -19,7 +19,7 @@
 configuration ReadForwardC { }
 implementation
 {
-    components ReadForwardP as App, MainC, ActiveMessageC, LedsC;
+    components ReadForwardP as App, MainC, ActiveMessageC, LedsC, CrcC;
     components new TimerMilliC();
     components new SensirionSht11C() as ThermalProvider;
     components new HamamatsuS1087ParC() as VisibleProvider;
@@ -28,6 +28,7 @@ implementation
     components new AMSenderC(AM_CHANNEL), new AMReceiverC(AM_CHANNEL);
 
     App.Boot -> MainC;
+    App.Crc -> CrcC;
     App.RadioControl -> ActiveMessageC;
     App.AMSend -> AMSenderC;
     App.Receive -> AMReceiverC;

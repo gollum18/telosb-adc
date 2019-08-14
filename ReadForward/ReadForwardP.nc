@@ -26,6 +26,7 @@ module ReadForwardP @safe()
 {
     uses {
         interface Boot;
+        interface Crc;
         interface SplitControl as RadioControl;
         interface AMSend;
         interface Receive;
@@ -46,13 +47,6 @@ implementation
 
     /* Current local state - interval, version and accumulated readings */
     readfwd_t local;
-
-    /* When we head an Oscilloscope message, we check it's sample count. If
-    it's ahead of ours, we "jump" forwards (set our count to the received
-    count). However, we must then suppress our next count increment. This
-    is a very simple form of "time" synchronization (for an abstract
-    notion of time). */
-    bool suppressCountChange;
 
     // Use LEDs to report various status issues.
     void report_problem() { call Leds.led0Toggle(); }
@@ -93,7 +87,6 @@ implementation
     }
 
     event void Boot.booted() {
-        local.id[0] = TOS_NODE_ID;
         call RadioControl.start();
     }
 
@@ -120,24 +113,11 @@ implementation
         
         // pass the message back if its not for me
         if (!call AMPacket.isForMe(msg)) {
-            return msg;
+            return msg;                                   `                      `
         }
-
+        
         report_received();
 
-        /* If we receive a newer version, update our interval. 
-           If we hear from a future count, jump ahead but suppress our own change
-        */
-        if (omsg->version > local.version)
-        {
-            local.version = omsg->version;
-            local.interval = omsg->interval;
-        }
-        if (omsg->count > local.count)
-        {
-            local.count = omsg->count;
-            suppressCountChange = TRUE;
-        }
         // set forwarding information
         local.group = omsg->group;
         local.hops = omsg->hops;
@@ -209,13 +189,6 @@ implementation
         if (!sendBusy) {
             report_problem();
         }
-        
-        /* Part 2 of cheap "time sync": increment our count if we didn't
-        jump ahead. */
-        if (!suppressCountChange) {
-            local.count++;
-        }
-        suppressCountChange = FALSE;
             
         if (MODE == ORIGIN) {
             advanceState();
