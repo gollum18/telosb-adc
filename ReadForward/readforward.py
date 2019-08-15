@@ -31,35 +31,12 @@ def bytes_to_int(buf):
     return buf[1] | buf[0] << 8;
 
 
-class Telosb:
-
-    # The calculations in this module come from the wiki page for the CM5000 at:
-    #   https://www.advanticsys.com/wiki/index.php?title=TestCM5000
-    # These calculations are valid, as the CM5000 uses the same sensors as the 
-    #   Telosb, I only had to adjust for voltage
-
-    # These values come directly from the Sensiron datasheet with 12-but adc
-    #   granted were using a 14-bit adc on the telosb but the readings *should*
-    #   never get that high
-    c1 = -2.0468
-    c2 = 0.0367
-    c3 = -1.5955e-6
-    
-    
-    @staticmethod
-    def get_humidity(reading):
-        reading = bytes_to_int(reading)
-        return Telosb.c1 + Telosb.c2 * reading + Telosb.c3 * (reading * reading)
-    
-    
-    @staticmethod
-    def v_sensor(reading):
-        return (reading/4096.0)*1.5
+class Telosb:   
     
     
     @staticmethod
     def i_light_metric(reading):
-        return Telosb.v_sensor(reading) / 100000.0
+        return Telosb.get_voltage(reading) / 100000.0
     
 
     @staticmethod
@@ -69,7 +46,6 @@ class Telosb:
         
         This will not work with readings for the infrared spectrum.
         '''
-        reading = bytes_to_int(reading)
         return 0.625 * (10**6) * Telosb.i_light_metric(reading) * 1000
     
     
@@ -80,18 +56,27 @@ class Telosb:
         
         This will not work with readings for the visible spectrum.
         '''
-        reading = bytes_to_int(reading)
         return 0.769 * (10**5) * Telosb.i_light_metric(reading) * 1000
-        
+       
     
+    # comes from official telosb doc on tinyos website
     @staticmethod
     def get_temperature(reading):
         reading = bytes_to_int(reading)
-        return Telosb.c1 + Telosb.c2 * reading
+        return -39.60 + 0.01 * reading
         
-    #TODO: Implement get_voltage
+    
+    # comes from official telosb doc on tinyos website
+    @staticmethod
+    def get_humidity(reading):
+        reading = bytes_to_int(reading)
+        return 4.0 + 0.0405 * reading + (-2.8 * 10**-6) * (reading**2.0)
+        
+        
+    # comes from official telosb docs on the tinyos site
     def get_voltage(reading):
-        pass
+        reading = bytes_to_int(reading)
+        return reading / 4096.0 * 1.5
 
 
 async def get_readings(packet, converter):
